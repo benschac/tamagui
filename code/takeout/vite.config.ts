@@ -1,6 +1,8 @@
+import entryShakingPlugin from 'vite-plugin-entry-shaking'
 import { removeReactNativeWebAnimatedPlugin, vxs } from 'vxs/vite'
 import type { UserConfig } from 'vite'
 import { tamaguiExtractPlugin } from '@tamagui/vite-plugin'
+import { createRequire } from 'node:module'
 
 Error.stackTraceLimit = Number.POSITIVE_INFINITY
 
@@ -12,6 +14,12 @@ if (!import.meta.dirname) {
 
 const optimizeInterop = ['expo-splash-screen']
 
+const require = createRequire(import.meta.url)
+const targets = [
+  require.resolve('@tamagui/lucide-icons').replace('/dist/cjs/index.js', ''),
+  require.resolve('@tamagui/colors').replace('/dist/cjs/index.js', ''),
+]
+
 export default {
   envPrefix: 'NEXT_PUBLIC_',
 
@@ -22,7 +30,6 @@ export default {
   resolve: {
     alias: {
       '~': import.meta.dirname,
-      'react-native-svg': '@tamagui/react-native-svg',
     },
 
     // todo automate, probably can just dedupe all package.json deps?
@@ -45,6 +52,7 @@ export default {
       '@ts-react/form',
       'react-hook-form',
       '@tamagui/animate-presence',
+      '@tamagui/one-theme',
       '@tamagui/presence-child',
       '@github/mini-throttle',
       'swr',
@@ -68,14 +76,28 @@ export default {
       },
     }),
 
+    // await entryShakingPlugin({
+    //   targets,
+    //   // debug: true,
+    // }),
+
     removeReactNativeWebAnimatedPlugin(),
 
-    process.env.TAMAGUI_EXTRACT || PROD
-      ? tamaguiExtractPlugin({
-          logTimings: true,
-        })
-      : null,
+    tamaguiExtractPlugin({
+      logTimings: true,
+    }),
   ],
+
+  environments: {
+    web: {
+      resolve: {
+        alias: {
+          // TODO not working (see IconApple if you change back)
+          'react-native-svg': '@tamagui/react-native-svg', // Not sure if we actually need this now since commenting out this line doesn't break anything on web (@tamagui/lucide-icons and IconApple still works)
+        },
+      },
+    },
+  },
 } satisfies UserConfig
 
 // const purgeCloudflareCDN = async () => {

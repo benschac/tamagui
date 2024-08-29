@@ -106,6 +106,11 @@ export interface TamaguiBuildOptions {
   disableExtractVariables?: boolean | 'theme'
 
   /**
+   * Disable optimizing media/theme hooks
+   */
+  disableOptimizeHooks?: boolean
+
+  /**
    * (Advanced) Disables the initial build and attempts to load from the .tamagui directory
    */
   disableInitialBuild?: boolean
@@ -114,6 +119,12 @@ export interface TamaguiBuildOptions {
    * Disables running lightningcss before emitting outputCSS
    */
   disableMinifyCSS?: boolean
+
+  /**
+   * This can speed up dev builds by only optimizing the client side generated code,
+   * but can cause hydration mis-matches
+   */
+  disableServerOptimization?: boolean
 
   /**
    * If you have a tamagui.build.ts file that describes your compiler setup, you can set it here

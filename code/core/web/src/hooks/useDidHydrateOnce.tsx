@@ -1,4 +1,5 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import React from 'react'
+import { getSetting } from '../config'
 
 let didHydrateOnce = false
 
@@ -23,6 +24,9 @@ export function useDidHydrateOnce() {
   if (process.env.TAMAGUI_TARGET !== 'web') {
     return true
   }
+  if (getSetting('disableSSR')) {
+    return true
+  }
   // if (process.env.TAMAGUI_REACT_19) {
   // if (!didHydrateOnce) {
   //   last = Date.now()
@@ -35,4 +39,4 @@ const emptySubscribe = () => () => {}
 const getClientSnapshot = () => true
 const getServerSnapshot = () => false
 const useDidHydrateSync = () =>
-  useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot)
+  React.useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot)

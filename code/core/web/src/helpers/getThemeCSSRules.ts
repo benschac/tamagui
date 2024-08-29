@@ -5,6 +5,10 @@ import type { Variable } from '../createVariable'
 import { variableToString } from '../createVariable'
 import type { CreateTamaguiProps, ThemeParsed } from '../types'
 import { tokensValueToVariable } from './registerCSSVariable'
+import { getSetting } from '../config'
+
+const darkLight = ['dark', 'light']
+const lightDark = ['light', 'dark']
 
 export function getThemeCSSRules(props: {
   config: CreateTamaguiProps
@@ -59,7 +63,7 @@ export function getThemeCSSRules(props: {
     // since we dont specify dark/light in classnames we have to do an awkward specificity war
     // use config.maxDarkLightNesting to determine how deep you can nest until it breaks
     if (hasDarkLight) {
-      const maxDepth = config.maxDarkLightNesting ?? 3
+      const maxDepth = getSetting('maxDarkLightNesting') ?? 3
 
       for (const subName of names) {
         const isDark = isDarkBase || subName.startsWith('dark_')
@@ -73,7 +77,7 @@ export function getThemeCSSRules(props: {
         }
 
         const childSelector = `${CNP}${subName.replace(/^(dark|light)_/, '')}`
-        const order = isDark ? ['dark', 'light'] : ['light', 'dark']
+        const order = isDark ? darkLight : lightDark
         const [stronger, weaker] = order
         const numSelectors = Math.round(maxDepth * 1.5)
 
@@ -101,7 +105,8 @@ export function getThemeCSSRules(props: {
             childSelector === lastParentSelector ? '' : childSelector
 
           // for light/dark/light:
-          selectorsSet.add(`${parentSelectors.join(' ')} ${nextChildSelector}`.trim())
+          const parentSelectorString = parentSelectors.join(' ')
+          selectorsSet.add(`${parentSelectorString} ${nextChildSelector}`)
           // selectorsSet.add(
           //   `${parentSelectors.join(' ')} ${nextChildSelector}.is_inversed`.trim()
           // )
@@ -115,7 +120,7 @@ export function getThemeCSSRules(props: {
     // this isBaseTheme logic could probably be done more efficiently above
     const selectorsString = selectors
       .map((x) => {
-        const rootSep = isBaseTheme(x) && config.themeClassNameOnRoot ? '' : ' '
+        const rootSep = isBaseTheme(x) && getSetting('themeClassNameOnRoot') ? '' : ' '
         return `:root${rootSep}${x}`
       })
       .join(', ')
@@ -123,12 +128,11 @@ export function getThemeCSSRules(props: {
     const css = `${selectorsString} {${vars}}`
     cssRuleSets.push(css)
 
-    if (config.shouldAddPrefersColorThemes) {
+    if (getSetting('shouldAddPrefersColorThemes')) {
       const bgString = theme.background
         ? `background:${variableToString(theme.background)};`
         : ''
       const fgString = theme.color ? `color:${variableToString(theme.color)}` : ''
-
       const bodyRules = `body{${bgString}${fgString}}`
       const isDark = themeName.startsWith('dark')
       const baseName = isDark ? 'dark' : 'light'
@@ -154,8 +158,9 @@ export function getThemeCSSRules(props: {
       cssRuleSets.push(prefersMediaSelectors)
     }
 
-    if (config.selectionStyles) {
-      const rules = config.selectionStyles(theme as any)
+    const selectionStyles = getSetting('selectionStyles')
+    if (selectionStyles) {
+      const rules = selectionStyles(theme as any)
       if (rules) {
         const selectionSelectors = baseSelectors.map((s) => `${s} ::selection`).join(', ')
         const styles = Object.entries(rules)

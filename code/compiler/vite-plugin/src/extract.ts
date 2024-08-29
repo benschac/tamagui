@@ -1,13 +1,11 @@
 // fork from https://github.com/seek-oss/vanilla-extract
 
 import type { TamaguiOptions } from '@tamagui/static'
-import * as StaticIn from '@tamagui/static'
 import path from 'node:path'
 import type { Plugin, ResolvedConfig, ViteDevServer } from 'vite'
 import { normalizePath, type Environment } from 'vite'
 
 // some sort of weird esm compat
-const Static = (StaticIn['default'] || StaticIn) as typeof StaticIn
 
 const styleUpdateEvent = (fileId: string) => `tamagui-style-update:${fileId}`
 
@@ -38,6 +36,27 @@ export function tamaguiExtractPlugin(optionsIn?: Partial<TamaguiOptions>): Plugi
     return environment?.name && environment.name !== 'client'
   }
 
+  let Static
+
+  async function loadTamaguiBuildConfig() {
+    if (!extractor) {
+      Static = (await import('@tamagui/static')).default
+      tamaguiOptions = Static.loadTamaguiBuildConfigSync({
+        ...optionsIn,
+        platform: 'web',
+      })
+      disableStatic = Boolean(tamaguiOptions.disable)
+      extractor = Static.createExtractor({
+        logger: config.logger,
+      })
+      await extractor!.loadTamagui({
+        components: ['tamagui'],
+        platform: 'web',
+        ...tamaguiOptions,
+      } satisfies TamaguiOptions)
+    }
+  }
+
   return {
     name: 'tamagui-extract',
     enforce: 'pre',
@@ -65,26 +84,15 @@ export function tamaguiExtractPlugin(optionsIn?: Partial<TamaguiOptions>): Plugi
     },
 
     async resolveId(source) {
-      if (isVite6AndNotClient(this.environment)) {
+      // lazy load, vite for some reason runs plugins twice in some esm compat thing
+      await loadTamaguiBuildConfig()
+
+      if (
+        tamaguiOptions?.disableServerOptimization &&
+        isVite6AndNotClient(this.environment)
+      ) {
         // only optimize on client - server should produce identical styles anyway!
         return
-      }
-
-      // lazy load, vite for some reason runs plugins twice in some esm compat thing
-      if (!extractor) {
-        tamaguiOptions = Static.loadTamaguiBuildConfigSync({
-          ...optionsIn,
-          platform: 'web',
-        })
-        disableStatic = Boolean(tamaguiOptions.disable)
-        extractor = Static.createExtractor({
-          logger: config.logger,
-        })
-        await extractor!.loadTamagui({
-          components: ['tamagui'],
-          platform: 'web',
-          ...tamaguiOptions,
-        } satisfies TamaguiOptions)
       }
 
       const [validId, query] = source.split('?')
@@ -116,9 +124,17 @@ export function tamaguiExtractPlugin(optionsIn?: Partial<TamaguiOptions>): Plugi
      *
      */
 
-    load(id) {
-      if (disableStatic || isVite6AndNotClient(this.environment)) {
+    async load(id) {
+      await loadTamaguiBuildConfig()
+
+      if (disableStatic) {
         // only optimize on client - server should produce identical styles anyway!
+        return
+      }
+      if (
+        tamaguiOptions?.disableServerOptimization &&
+        isVite6AndNotClient(this.environment)
+      ) {
         return
       }
       const [validId] = id.split('?')
@@ -126,8 +142,14 @@ export function tamaguiExtractPlugin(optionsIn?: Partial<TamaguiOptions>): Plugi
     },
 
     async transform(code, id, ssrParam) {
-      if (disableStatic || isVite6AndNotClient(this.environment)) {
+      if (disableStatic) {
         // only optimize on client - server should produce identical styles anyway!
+        return
+      }
+      if (
+        tamaguiOptions?.disableServerOptimization &&
+        isVite6AndNotClient(this.environment)
+      ) {
         return
       }
 

@@ -12,16 +12,19 @@ export default {
       '~': import.meta.dirname,
       'react-native-svg': '@tamagui/react-native-svg',
     },
-
-    // dedupe: ['react-wrap-balancer'],
   },
 
-  // optimizeDeps: {
-  //   include: ['react-wrap-balancer'],
-  // },
+  ssr: {
+    noExternal: true,
+    external: ['@tamagui/mdx'],
+  },
 
   plugins: [
-    vxs(),
+    vxs({
+      deps: {
+        '@tamagui/lucide-icons': true,
+      },
+    }),
     // tamaguiPlugin(),
     // tamaguiExtractPlugin(),
   ],

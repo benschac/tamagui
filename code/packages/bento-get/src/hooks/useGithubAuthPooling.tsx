@@ -1,13 +1,16 @@
-import { useContext } from 'react'
+import React from 'react'
 import useSWR from 'swr'
-import { AppContext } from '../commands/index.js'
+
+import { AppContext } from '../data/AppContext.js'
 import { GITHUB_CLIENT_ID } from '../constants.js'
 import type { GithubCode } from './useGithubAuth.js'
 
 export const useGithubAuthPooling = ({
   deviceCodeData,
-}: { deviceCodeData: GithubCode }) => {
-  const appContext = useContext(AppContext)
+}: {
+  deviceCodeData: GithubCode
+}) => {
+  const appContext = React.useContext(AppContext)
 
   const fetchAccessToken = async (url: string) => {
     const response = await fetch(url, {
@@ -19,7 +22,7 @@ export const useGithubAuthPooling = ({
       body: JSON.stringify({
         // client_id: deviceCodeData.client_id,
         client_id: GITHUB_CLIENT_ID,
-        device_code: deviceCodeData.device_code,
+        device_code: deviceCodeData?.device_code,
         grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
       }),
     })
@@ -34,21 +37,24 @@ export const useGithubAuthPooling = ({
     if (result.access_token) {
       // Handle success - save access token, navigate user away from auth screen, etc.
       appContext.tokenStore.set('token', result)
+      appContext.setInstallState((prev) => {
+        return {
+          ...prev,
+          shouldOpenBrowser: false,
+        }
+      })
       result.access_token
-    } else {
-      // Handle waiting for user to authorize, or showing an error message
-      // console.log("Waiting for for user authorization...");
     }
     return result
   }
 
   const { data, error, isLoading } = useSWR<string>(
-    appContext.install?.enterToOpenBrowser && deviceCodeData
+    appContext.installState?.shouldOpenBrowser && deviceCodeData
       ? 'https://github.com/login/oauth/access_token'
       : null,
     fetchAccessToken,
     {
-      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      onErrorRetry: (_error, _key, _config, revalidate, { retryCount }) => {
         // // Never retry on 404.
         // if (error.status === 404) return;
 

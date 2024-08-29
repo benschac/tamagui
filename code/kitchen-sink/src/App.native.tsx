@@ -1,6 +1,7 @@
+import React from 'react'
 import { ToastViewport } from '@tamagui/sandbox-ui'
 import { useFonts } from 'expo-font'
-import { useEffect, useMemo, useState } from 'react'
+
 import { Appearance, Platform, useColorScheme } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -13,7 +14,7 @@ if (Platform.OS === 'ios') {
 }
 
 export default function App() {
-  const [theme, setTheme] = useState(Appearance.getColorScheme())
+  const [theme, setTheme] = React.useState(Appearance.getColorScheme())
   const [loaded] = useFonts({
     Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
     InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
@@ -21,15 +22,15 @@ export default function App() {
 
   const colorScheme = useColorScheme()
 
-  useEffect(() => {
+  React.useEffect(() => {
     setTheme(colorScheme)
   }, [colorScheme])
 
-  const children = useMemo(() => {
+  const children = React.useMemo(() => {
     return <Navigation />
   }, [])
 
-  const themeContext = useMemo(() => {
+  const themeContext = React.useMemo(() => {
     return {
       value: theme,
       set: (next) => {

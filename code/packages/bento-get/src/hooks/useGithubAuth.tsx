@@ -1,11 +1,12 @@
-// @ts-nocheck
-import fetch from 'node-fetch'
+import React from 'react'
 import querystring from 'node:querystring'
+import fetch from 'node-fetch'
 import open from 'open'
-import { useCallback } from 'react'
 import useSWR from 'swr'
+
 import { GITHUB_CLIENT_ID } from '../constants.js'
 import { useGithubAuthPooling } from './useGithubAuthPooling.js'
+import { debugLog } from '../commands/index.js'
 
 const fetcher = async (url: string) => {
   const res = await fetch(url, {
@@ -17,7 +18,10 @@ const fetcher = async (url: string) => {
     }),
   })
   if (!res.ok) {
-    const error = new Error('An error occurred while fetching the data.')
+    const error = new Error('An error occurred while fetching the data.') as Error & {
+      info?: any
+      status?: number
+    }
     error.info = await res.json()
     error.status = res.status
     throw error
@@ -32,27 +36,33 @@ export type GithubCode = {
   interval: string
   user_code: string
   verification_uri: string
-}
+} | null
 
 export const useGithubAuth = () => {
-  let { data, error, isLoading } = useSWR<string>(
+  const { data, error, isLoading } = useSWR<string>(
     'https://github.com/login/device/code',
     fetcher
   )
 
-  // @ts-ignore
-  data = querystring.parse(data || '')
-  useGithubAuthPooling({ deviceCodeData: data as any as GithubCode })
+  const parsedData = React.useMemo(() => {
+    if (!data) return null
+    return querystring.parse(data) as unknown as GithubCode
+  }, [data])
 
-  const openLoginUrl = useCallback(() => {
-    if (isLoading) return
-    if (error) return
-    if (!data) return
-    open('https://github.com/login/device')
-  }, [data, error, isLoading])
+  debugLog({
+    parsedData,
+  })
+
+  useGithubAuthPooling({ deviceCodeData: parsedData })
+
+  const openLoginUrl = React.useCallback(() => {
+    if (parsedData) {
+      open(parsedData.verification_uri)
+    }
+  }, [parsedData])
 
   return {
-    data,
+    data: parsedData,
     error,
     isLoading,
     openLoginUrl,

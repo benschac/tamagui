@@ -32,7 +32,7 @@ export default function DocIntroPage() {
   const { code, frontmatter, examples } = useLoader(loader)
 
   if (!frontmatter || !code) {
-    console.warn(`No frontmatter/code?`, { frontmatter, code })
+    console.warn(`No frontmatter/code?`)
     return null
   }
 
@@ -62,7 +62,7 @@ export default function DocIntroPage() {
           <Component components={components as any} />
         </TamaguiExamples.Provider>
       </ThemeTint>
-      <DocsQuickNav key={'ok'} />
+      <DocsQuickNav />
     </>
   )
 }
